@@ -1,12 +1,17 @@
 local M = {}
 
+local FILE_TYPE = "navstack"
+
 ---@type number
 local sidebar_bufnr = -1
 
 ---@type number
 local sidebar_winid = -1
 
+M.internal_jump = false
+
 -- stack to hold opened file paths
+---@type FileEntry[]
 M.file_stack = {}
 
 ---@class Config
@@ -47,11 +52,11 @@ function M.open_sidebar()
 	vim.bo[sidebar_bufnr].buftype = 'nofile'
 	vim.bo[sidebar_bufnr].bufhidden = 'wipe'
 	vim.bo[sidebar_bufnr].swapfile = false
-	vim.bo[sidebar_bufnr].filetype = 'mysidebar'
+	vim.bo[sidebar_bufnr].filetype = FILE_TYPE
 	vim.bo[sidebar_bufnr].bufhidden = 'hide'
 	vim.bo[sidebar_bufnr].buflisted = false
 
-	vim.api.nvim_buf_set_name(sidebar_bufnr, 'sidebar://sidebar')
+	vim.api.nvim_buf_set_name(sidebar_bufnr, 'navstack://')
 
 	-- Window options
 	vim.wo[sidebar_winid].number = false
@@ -61,7 +66,7 @@ function M.open_sidebar()
 	vim.api.nvim_win_set_width(sidebar_winid, M.config.sidebar.width)
 
 	-- Write content
-	M.render_sidebar(M.file_stack)
+	M.render_sidebar()
 
 	-- Restore focus to original window
 	vim.api.nvim_set_current_win(current_win)
@@ -79,7 +84,14 @@ end
 
 local ns = vim.api.nvim_create_namespace("mysidebar")
 
-function M.render_sidebar(entries)
+---@class FileEntry
+---@field name string
+---@field path string
+---@field is_current boolean
+
+function M.render_sidebar()
+	if M.file_stack == nil then return end
+
 	local buf = sidebar_bufnr
 
 	-- Free the buffer to draw in
@@ -87,9 +99,9 @@ function M.render_sidebar(entries)
 
 	-- Set the actual lines (one per entry)
 	local lines = {}
-	for i, entry in ipairs(entries) do
+	for i, entry in ipairs(M.file_stack) do
 		local padding = "  "
-		if i == 1 then
+		if entry.is_current then
 			if M.config.sidebar.show_current then
 				table.insert(lines, padding .. entry.name)
 			end
@@ -103,8 +115,8 @@ function M.render_sidebar(entries)
 	-- Clear previous extmarks
 	vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 
-	for i, entry in ipairs(entries) do
-		if i == 1 then
+	for i, entry in ipairs(M.file_stack) do
+		if entry.is_current then
 			-- Add virtual lines for paths
 			vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, {
 				virt_lines = {
@@ -127,7 +139,7 @@ function M.render_sidebar(entries)
 			})
 
 			vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, {
-				virt_text = { { tostring(i - 1) .. ".", "Special" } },
+				virt_text = { { tostring(i) .. ".", "Special" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
 			})
 		end
@@ -145,13 +157,69 @@ function M.render_sidebar(entries)
 	})
 end
 
-function M.on_file_open()
+function M.jump_to_previous()
+	if #M.file_stack <= 1 then
+		return
+	end
+
+	local current_entry = 0
+	for i, entry in ipairs(M.file_stack) do
+		if entry.is_current then
+			current_entry = i
+			break
+		end
+	end
+	if current_entry == 0 then
+		return
+	end
+
+	local jump_to = current_entry - 1
+
+	if current_entry == 1 then
+		current_entry = #M.file_stack
+	end
+
+	M.open_entry(jump_to)
+end
+
+function M.jump_to_next()
+	if #M.file_stack <= 1 then
+		return
+	end
+
+	local current_entry = 0
+	for i, entry in ipairs(M.file_stack) do
+		if entry.is_current then
+			current_entry = i
+			break
+		end
+	end
+	if current_entry == 0 then
+		return
+	end
+
+	if current_entry == #M.file_stack then
+		current_entry = 1
+	end
+
+	M.open_entry(current_entry + 1)
+end
+
+function M.on_buffer_enter()
+	local full_path = vim.api.nvim_buf_get_name(0)
+	vim.notify(full_path, vim.log.levels.INFO)
+
 	local exclude_patterns = {
 		"oil://*",
-		"sidebar://*",
+		"navstack://*",
 	}
 
-	local full_path = vim.api.nvim_buf_get_name(0)
+	if full_path == "" then
+		return
+	end
+
+	local filename = vim.fn.fnamemodify(full_path, ":t")
+	local relative_path = vim.fn.fnamemodify(full_path, ":.")
 
 	-- Ignore files that match the exclude patterns
 	for _, pattern in ipairs(exclude_patterns) do
@@ -160,36 +228,55 @@ function M.on_file_open()
 		end
 	end
 
-	if full_path ~= "" then
-		local filename = vim.fn.fnamemodify(full_path, ":t")
-		local relative_path = vim.fn.fnamemodify(full_path, ":.")
+	if M.internal_jump then
+		M.internal_jump = false
 
-		-- add filename at top of stack (avoid duplicates)
-		for i, v in ipairs(M.file_stack) do
-			-- if its the same file don't add it again
-			if i == 1 and v.name == filename and v.path == relative_path then
-				return
-			end
+		-- Find out which file we're jumping to
+		local jump_to = 0
+		for i, entry in ipairs(M.file_stack) do
+			entry.is_current = false
 
-			if v.name == filename and v.path == relative_path then
-				table.remove(M.file_stack, i)
-				break
+			if entry.path == relative_path and entry.name == filename then
+				jump_to = i
+				entry.is_current = true
 			end
 		end
 
-		table.insert(M.file_stack, 1, {
-			name = filename,
-			path = relative_path,
-		})
-
-		if sidebar_winid and vim.api.nvim_win_is_valid(sidebar_winid) then
-			M.render_sidebar(M.file_stack)
+		if jump_to > 0 then
+			M.render_sidebar()
 		end
+
+		return
+	end
+
+	-- add filename at top of stack (avoid duplicates)
+	for i, file in ipairs(M.file_stack) do
+		if file.is_current then
+			file.is_current = false
+		end
+
+		-- if its the same file don't add it again
+		if file.name == filename and file.path == relative_path then
+			table.remove(M.file_stack, i)
+		end
+	end
+
+	table.insert(M.file_stack, 1, {
+		name = filename,
+		path = relative_path,
+		is_current = true,
+	})
+
+	if sidebar_winid and vim.api.nvim_win_is_valid(sidebar_winid) then
+		M.render_sidebar()
 	end
 end
 
+---@param number number
 function M.open_entry(number)
-	local entry = M.file_stack[number + 1]
+	M.internal_jump = true
+
+	local entry = M.file_stack[number]
 	if not entry then
 		vim.notify("No file at number " .. number, vim.log.levels.WARN)
 		return
@@ -224,11 +311,14 @@ end
 
 function M.open_entry_at_cursor()
 	local line = vim.api.nvim_win_get_cursor(0)[1] -- 1-based line under cursor
-	if M.config.sidebar.show_current then
-		line = line - 1
-	end
 
 	M.open_entry(line)
+end
+
+function M.on_navstack_enter()
+	vim.notify("on_navstack_enter", vim.log.levels.INFO)
+	-- Next jump will be internal
+	M.internal_jump = true
 end
 
 ---@param config Config | nil
@@ -244,12 +334,20 @@ function M.setup(config)
 
 	vim.api.nvim_create_autocmd("BufEnter", {
 		pattern = "*",
-		callback = M.on_file_open,
+		callback = M.on_buffer_enter,
+	})
+
+	vim.api.nvim_create_autocmd("BufEnter", {
+		pattern = "navstack://*",
+		callback = M.on_navstack_enter,
 	})
 
 	for i = 1, 9 do
 		vim.keymap.set("n", "<leader>" .. tostring(i), function() M.open_entry(i) end, { noremap = true, silent = true })
 	end
+
+	vim.keymap.set("n", "<C-p>", function() M.jump_to_previous() end, { noremap = true, silent = true })
+	vim.keymap.set("n", "<C-n>", function() M.jump_to_next() end, { noremap = true, silent = true })
 end
 
 return M

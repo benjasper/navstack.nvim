@@ -4,6 +4,7 @@
 
 - [ ] Git support
 - [ ] File changed marker
+- [ ] Diagnostic marker
 - [ ] Prev and next file
 ### Options
 - [ ] Show only files in cwd
