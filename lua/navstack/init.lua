@@ -15,12 +15,14 @@ M.file_stack = {}
 ---@class SidebarConfig
 ---@field width number
 ---@field show_current boolean Whether to show the current file in the sidebar
+---@field open_on_start boolean Whether to open the sidebar on startup
 
 ---@type Config
 M.config = {
 	sidebar = {
 		width = 50,
 		show_current = true,
+		open_on_start = false,
 	}
 }
 
@@ -232,6 +234,10 @@ end
 ---@param config Config | nil
 function M.setup(config)
 	M.config = vim.tbl_deep_extend("force", M.config, config or {})
+
+	if M.config.sidebar.open_on_start then
+		M.open_sidebar()
+	end
 
 	vim.api.nvim_create_user_command('SidebarToggle', M.toggle_sidebar, {})
 	vim.api.nvim_create_user_command('SidebarOpen', M.open_sidebar, {})
