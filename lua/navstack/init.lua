@@ -53,7 +53,6 @@ function M.setup(customConfig)
 	--
 	vim.api.nvim_create_autocmd("BufModifiedSet", {
 		callback = function(args)
-			vim.notify("BufModifiedSet " .. args.buf)
 			local bufnr = args.buf
 			filestack:on_buffer_modified(bufnr)
 		end,

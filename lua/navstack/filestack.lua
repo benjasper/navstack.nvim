@@ -6,7 +6,6 @@ FileEntry = require "navstack.file_entry"
 ---@field sidebar_winid number
 ---@field internal_jump boolean
 ---@field file_stack FileEntry[]
----@field is_rerendering boolean
 Filestack = {}
 
 local FILE_TYPE = "navstack"
@@ -74,12 +73,6 @@ function Filestack:toggle_sidebar()
 end
 
 function Filestack:render_sidebar()
-	if self.is_rerendering then
-		vim.notify("Already rerendering", vim.log.levels.ERROR)
-		return
-	end
-	self.is_rerendering = true
-
 	if self.file_stack == nil then return end
 
 	-- Free the buffer to draw in
@@ -138,53 +131,6 @@ function Filestack:render_sidebar()
 			self:open_entry_at_cursor()
 		end,
 	})
-end
-
----@param entrynr number
-function Filestack:rerender_file_(entrynr)
-	if self.file_stack == nil then return end
-
-	local buf = self.sidebar_bufnr
-
-	-- Free the buffer to draw in
-	vim.bo[self.sidebar_bufnr].modifiable = true
-
-	local entry = self.file_stack[entrynr]
-
-	-- Set the line for the entry
-	vim.api.nvim_buf_set_lines(buf, entrynr - 1, entrynr, false, { entry:render_title() })
-
-	vim.api.nvim_buf_clear_namespace(buf, ns, entrynr - 1, entrynr)
-
-	-- Add virtual lines for paths
-	vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, entrynr - 1, 0, {
-		virt_lines = {
-			{ { "  " .. entry.path, "Comment" } },
-		},
-		virt_lines_above = false,
-	})
-
-	if entry.is_current then
-		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, entrynr - 1, 0, {
-			virt_text = { { "→", "Special" } },
-			virt_text_pos = 'overlay', -- so it appears inline before text
-		})
-	else
-		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, entrynr - 1, 0, {
-			virt_text = { { tostring(entrynr) .. ".", "Special" } },
-			virt_text_pos = 'overlay', -- so it appears inline before text
-		})
-	end
-
-	if entry.is_temporary then
-		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, entrynr - 1, 0, {
-			end_line = entrynr,
-			hl_group = "DiagnosticWarn",
-			hl_eol = true, -- highlight to the end of line
-		})
-	end
-
-	vim.bo[self.sidebar_bufnr].modifiable = false
 end
 
 function Filestack:jump_to_next()
@@ -376,11 +322,11 @@ function Filestack:on_buffer_modified(bufnr)
 	local full_path = vim.api.nvim_buf_get_name(bufnr)
 
 	-- Find out if the file is in the stack
-	for index, entry in ipairs(self.file_stack) do
+	for _, entry in ipairs(self.file_stack) do
 		if entry.full_path == full_path then
 			entry.is_modified = modified
 
-			self:rerender_file_(index)
+			self:render_sidebar()
 			break
 		end
 	end
