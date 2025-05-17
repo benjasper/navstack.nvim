@@ -324,8 +324,8 @@ function Filestack:on_buffer_enter()
 	table.insert(self.file_stack, 1, new_entry)
 
 	-- Remove entries that are over the limit
-	if #self.file_stack > self.config.max_files then
-		table.remove(self.file_stack, #self.file_stack - self.config.max_files + 1)
+	while #self.file_stack > self.config.max_files do
+		table.remove(self.file_stack) -- removes last element by default
 	end
 
 	-- Persist asynchronously
