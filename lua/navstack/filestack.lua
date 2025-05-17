@@ -410,6 +410,16 @@ function Filestack:on_diagnostic_changed(bufnr)
 	self:render_sidebar()
 end
 
+function Filestack:on_file_deleted(file_path)
+	for i, entry in ipairs(self.file_stack) do
+		if entry.full_path == file_path then
+			table.remove(self.file_stack, i)
+			self:render_sidebar()
+			break
+		end
+	end
+end
+
 function Filestack:register_autocommands()
 	local group = vim.api.nvim_create_augroup("Navstack", { clear = true })
 

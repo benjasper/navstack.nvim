@@ -17,12 +17,14 @@
 ## Roadmap
 - [x] Prev and next file
 - [x] Ignore files outside cwd
-- [ ] Open buffer in current window
+- [x] Open buffer in current window
+- [x] Diagnostic marker
+- [x] File modified marker
+- [x] Better filetype exclusion
+- [ ] Max length of stack
 - [ ] Save list to disk per cwd
-- [ ] Custom highlight groups
 - [ ] Clear list
+- [ ] Custom highlight groups
 - [ ] Git support
-- [x] File changed marker
-- [ ] Diagnostic marker
 - [ ] Pin buffer to specific number
-- [ ] Better filetype exclusion
+- [ ] Support for deleted / moved / renamed files (Maybe when 'file-change detection' is implemented https://neovim.io/roadmap/)
