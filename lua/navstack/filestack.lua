@@ -102,7 +102,7 @@ function Filestack:render_sidebar()
 
 	-- Set the actual lines (one per entry)
 	local lines = {}
-	for index, entry in ipairs(self.file_stack) do
+	for _, entry in ipairs(self.file_stack) do
 		local line = entry:render_title()
 
 		table.insert(lines, line)
@@ -114,6 +114,11 @@ function Filestack:render_sidebar()
 	vim.api.nvim_buf_clear_namespace(self.sidebar_bufnr, ns, 0, -1)
 
 	for i, entry in ipairs(self.file_stack) do
+		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2, {
+			end_col = 4,
+			hl_group = entry.icon_hl,
+		})
+
 		-- Add virtual lines for paths
 		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
 			virt_lines = {
@@ -124,7 +129,7 @@ function Filestack:render_sidebar()
 
 		if entry.is_current then
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
-				virt_text = { { "→", "Special" } },
+				virt_text = { { "→ ", "Special" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
 			})
 		else
@@ -137,11 +142,12 @@ function Filestack:render_sidebar()
 		for severity, count in pairs(entry.diagnostics) do
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
 				virt_text = { { DIAGNOSTIC_SIGNS[severity] .. count, DIAGNOSTIC_HIGHLIGHTS[severity] } },
+				virt_text_pos = 'eol',
 			})
 		end
 
 		if entry.is_temporary then
-			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
+			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2, {
 				end_line = i,
 				hl_group = "Comment",
 				hl_eol = true, -- highlight to the end of line

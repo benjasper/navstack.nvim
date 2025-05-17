@@ -24,7 +24,7 @@
 - [x] Max length of stack
 - [x] Save list to disk per cwd
 - [x] Clear list
-- [ ] Icon support
+- [x] Icon support
 - [ ] Auto resize sidebar
 - [ ] Custom highlight groups
 - [ ] Git support

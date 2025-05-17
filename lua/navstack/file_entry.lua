@@ -1,3 +1,5 @@
+Utils = require "navstack.utils"
+
 ---@class FileEntry
 ---@field name string
 ---@field path string
@@ -6,6 +8,8 @@
 ---@field is_temporary boolean
 ---@field is_modified boolean
 ---@field diagnostics table<vim.diagnostic.Severity, integer>
+---@field icon string
+---@field icon_hl string
 local FileEntry = {}
 
 ---@param name string
@@ -22,10 +26,15 @@ function FileEntry:new(name, path, is_current, is_temporary, full_path)
 		full_path = full_path,
 		is_modified = false,
 		diagnostics = {},
+		icon = "",
+		icon_hl = "",
 	}
 
 	setmetatable(obj, self)
 	self.__index = self
+
+	obj.icon, obj.icon_hl = Utils.get_icon(obj.name)
+
 	return obj
 end
 
@@ -56,7 +65,7 @@ function FileEntry:render_title()
 		icon = icon .. "● "
 	end
 
-	return padding .. icon .. self.name
+	return padding .. icon .. self.icon .. " " .. self.name
 end
 
 return FileEntry
