@@ -265,6 +265,9 @@ function Filestack:on_buffer_enter()
 		return
 	end
 
+	-- if we find the file we can just move it
+	local found_file = nil
+
 	-- search for files that should be removed from the stack
 	for i = #self.file_stack, 1, -1 do
 		local file = self.file_stack[i]
@@ -273,20 +276,34 @@ function Filestack:on_buffer_enter()
 			file.is_current = false
 		end
 
-		if file.is_temporary or (file.name == filename and file.path == relative_path) then
+		if file.full_path == full_path then
+			found_file = file
+		end
+
+		if file.is_temporary or file.full_path == full_path then
 			table.remove(self.file_stack, i)
 		end
 	end
 
 	local is_temporary = self.config.cwd_only and not self:is_in_cwd(full_path)
 
-	table.insert(self.file_stack, 1, FileEntry:new(
-		filename,
-		relative_path,
-		true,
-		is_temporary,
-		full_path
-	))
+	---@type FileEntry | nil
+	local new_entry = nil
+
+	if found_file then
+		found_file.is_current = true
+		new_entry = found_file
+	else
+		new_entry = FileEntry:new(
+			filename,
+			relative_path,
+			true,
+			is_temporary,
+			full_path
+		)
+	end
+
+	table.insert(self.file_stack, 1, new_entry)
 
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		self:render_sidebar()
