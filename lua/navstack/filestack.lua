@@ -194,6 +194,16 @@ function Filestack:jump_to_previous()
 	self:open_entry(jump_to)
 end
 
+local function is_real_file_buffer(bufnr)
+	bufnr = bufnr or vim.api.nvim_get_current_buf()
+
+	local buftype = vim.bo[bufnr].buftype
+	local name = vim.api.nvim_buf_get_name(bufnr)
+	local listed = vim.fn.buflisted(bufnr) == 1
+
+	return listed and buftype == "" and name ~= ""
+end
+
 function Filestack:on_buffer_enter()
 	local full_path = vim.api.nvim_buf_get_name(0)
 
@@ -202,7 +212,7 @@ function Filestack:on_buffer_enter()
 		"navstack://*",
 	}
 
-	if full_path == "" then
+	if full_path == "" or not is_real_file_buffer() then
 		return
 	end
 

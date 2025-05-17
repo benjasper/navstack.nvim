@@ -13,15 +13,15 @@ function M.open_sidebar()
 	M.filestack:open_sidebar()
 end
 
-function M:open_entry(number)
+function M.open_entry(number)
 	M.filestack:open_entry(number)
 end
 
-function M:jump_to_previous()
+function M.jump_to_previous()
 	M.filestack:jump_to_previous()
 end
 
-function M:jump_to_next()
+function M.jump_to_next()
 	M.filestack:jump_to_next()
 end
 
