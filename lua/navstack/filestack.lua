@@ -1,3 +1,5 @@
+FileEntry = require "navstack.file_entry"
+
 ---@class Filestack
 ---@field config Config
 ---@field sidebar_bufnr number
@@ -70,11 +72,6 @@ function Filestack:toggle_sidebar()
 end
 
 local ns = vim.api.nvim_create_namespace("navstack")
-
----@class FileEntry
----@field name string
----@field path string
----@field is_current boolean
 
 function Filestack:render_sidebar()
 	if self.file_stack == nil then return end
@@ -259,11 +256,7 @@ function Filestack:on_buffer_enter()
 		end
 	end
 
-	table.insert(self.file_stack, 1, {
-		name = filename,
-		path = relative_path,
-		is_current = true,
-	})
+	table.insert(self.file_stack, 1, FileEntry:new(filename, relative_path, true, false))
 
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		self:render_sidebar()
