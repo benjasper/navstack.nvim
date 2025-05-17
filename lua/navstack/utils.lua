@@ -21,6 +21,10 @@ local function get_icon_provider()
 			return icon, hl
 		end
 	end
+
+	return function()
+		return "", "Comment"
+	end
 end
 
 local icon_provider = get_icon_provider()
