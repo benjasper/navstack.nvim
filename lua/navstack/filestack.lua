@@ -11,6 +11,20 @@ Filestack = {}
 local FILE_TYPE = "navstack"
 local ns = vim.api.nvim_create_namespace("navstack")
 
+local DIAGNOSTIC_SIGNS = {
+	[vim.diagnostic.severity.ERROR] = "󰅚 ",
+	[vim.diagnostic.severity.WARN] = "󰀪 ",
+	[vim.diagnostic.severity.INFO] = "󰋽 ",
+	[vim.diagnostic.severity.HINT] = "󰌶 ",
+}
+
+local DIAGNOSTIC_HIGHLIGHTS = {
+	[vim.diagnostic.severity.ERROR] = "DiagnosticError",
+	[vim.diagnostic.severity.WARN] = "DiagnosticWarn",
+	[vim.diagnostic.severity.INFO] = "DiagnosticInfo",
+	[vim.diagnostic.severity.HINT] = "DiagnosticHint",
+}
+
 ---@param config Config
 ---@return Filestack
 function Filestack:new(config)
@@ -112,10 +126,16 @@ function Filestack:render_sidebar()
 			})
 		end
 
+		for severity, count in pairs(entry.diagnostics) do
+			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
+				virt_text = { { DIAGNOSTIC_SIGNS[severity] .. count, DIAGNOSTIC_HIGHLIGHTS[severity] } },
+			})
+		end
+
 		if entry.is_temporary then
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
 				end_line = i,
-				hl_group = "DiagnosticWarn",
+				hl_group = "Comment",
 				hl_eol = true, -- highlight to the end of line
 			})
 		end
@@ -332,6 +352,37 @@ function Filestack:on_buffer_modified(bufnr)
 	end
 end
 
+function Filestack:on_diagnostic_changed(bufnr)
+	local foundEntry = nil
+	-- Find the file entry for the current buffer
+	for _, entry in ipairs(self.file_stack) do
+		if entry.full_path == vim.api.nvim_buf_get_name(bufnr) then
+			foundEntry = entry
+			break
+		end
+	end
+
+	if not foundEntry then
+		return
+	end
+
+	local diagnostics = vim.diagnostic.get(bufnr)
+
+	---@type table<vim.diagnostic.Severity, integer>
+	local diagnosticsTable = {}
+
+	for _, d in ipairs(diagnostics) do
+		if diagnosticsTable[d.severity] == nil then
+			diagnosticsTable[d.severity] = 0
+		end
+		diagnosticsTable[d.severity] = diagnosticsTable[d.severity] + 1
+	end
+
+	foundEntry:set_diagnostics(diagnosticsTable)
+
+	self:render_sidebar()
+end
+
 function Filestack:register_autocommands()
 	local group = vim.api.nvim_create_augroup("Navstack", { clear = true })
 
@@ -363,6 +414,13 @@ function Filestack:register_autocommands()
 		group = group,
 	})
 
+	vim.api.nvim_create_autocmd("DiagnosticChanged", {
+		group = group,
+		callback = function(args)
+			local bufnr = args.buf
+			self:on_diagnostic_changed(bufnr)
+		end,
+	})
 end
 
 return Filestack
