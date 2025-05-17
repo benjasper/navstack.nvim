@@ -1,12 +1,14 @@
+local Config = require "navstack.config"
+
 local M = {}
 
 local FILE_TYPE = "navstack"
 
 ---@type number
-local sidebar_bufnr = -1
+M.sidebar_bufnr = -1
 
 ---@type number
-local sidebar_winid = -1
+M.sidebar_winid = -1
 
 M.internal_jump = false
 
@@ -14,27 +16,13 @@ M.internal_jump = false
 ---@type FileEntry[]
 M.file_stack = {}
 
----@class Config
----@field sidebar SidebarConfig
-
----@class SidebarConfig
----@field width number
----@field show_current boolean Whether to show the current file in the sidebar
----@field open_on_start boolean Whether to open the sidebar on startup
-
 ---@type Config
-M.config = {
-	sidebar = {
-		width = 50,
-		show_current = true,
-		open_on_start = false,
-	}
-}
+M.config = nil
 
 function M.open_sidebar()
 	-- If already open, don't open again
-	if sidebar_winid and vim.api.nvim_win_is_valid(sidebar_winid) then
-		vim.api.nvim_set_current_win(sidebar_winid)
+	if M.sidebar_winid and vim.api.nvim_win_is_valid(M.sidebar_winid) then
+		vim.api.nvim_set_current_win(M.sidebar_winid)
 		return
 	end
 
@@ -44,26 +32,26 @@ function M.open_sidebar()
 	-- Create a new vertical split on the left
 	-- vim.cmd('topleft vnew')
 	vim.cmd('botright vnew')
-	sidebar_winid = vim.api.nvim_get_current_win()
-	sidebar_bufnr = vim.api.nvim_get_current_buf()
+	M.sidebar_winid = vim.api.nvim_get_current_win()
+	M.sidebar_bufnr = vim.api.nvim_get_current_buf()
 
 	-- Buffer options
 	-- Set buffer options first, but leave modifiable = true for now
-	vim.bo[sidebar_bufnr].buftype = 'nofile'
-	vim.bo[sidebar_bufnr].bufhidden = 'wipe'
-	vim.bo[sidebar_bufnr].swapfile = false
-	vim.bo[sidebar_bufnr].filetype = FILE_TYPE
-	vim.bo[sidebar_bufnr].bufhidden = 'hide'
-	vim.bo[sidebar_bufnr].buflisted = false
+	vim.bo[M.sidebar_bufnr].buftype = 'nofile'
+	vim.bo[M.sidebar_bufnr].bufhidden = 'wipe'
+	vim.bo[M.sidebar_bufnr].swapfile = false
+	vim.bo[M.sidebar_bufnr].filetype = FILE_TYPE
+	vim.bo[M.sidebar_bufnr].bufhidden = 'hide'
+	vim.bo[M.sidebar_bufnr].buflisted = false
 
-	vim.api.nvim_buf_set_name(sidebar_bufnr, 'navstack://')
+	vim.api.nvim_buf_set_name(M.sidebar_bufnr, 'navstack://')
 
 	-- Window options
-	vim.wo[sidebar_winid].number = false
-	vim.wo[sidebar_winid].relativenumber = false
-	vim.wo[sidebar_winid].winfixwidth = true
-	vim.wo[sidebar_winid].signcolumn = 'auto'
-	vim.api.nvim_win_set_width(sidebar_winid, M.config.sidebar.width)
+	vim.wo[M.sidebar_winid].number = false
+	vim.wo[M.sidebar_winid].relativenumber = false
+	vim.wo[M.sidebar_winid].winfixwidth = true
+	vim.wo[M.sidebar_winid].signcolumn = 'auto'
+	vim.api.nvim_win_set_width(M.sidebar_winid, M.config.sidebar.width)
 
 	-- Write content
 	M.render_sidebar()
@@ -73,16 +61,17 @@ function M.open_sidebar()
 end
 
 function M.toggle_sidebar()
-	if sidebar_winid and vim.api.nvim_win_is_valid(sidebar_winid) then
-		vim.api.nvim_win_close(sidebar_winid, true)
-		sidebar_winid = -1
-		sidebar_bufnr = -1
+	if M.sidebar_winid and vim.api.nvim_win_is_valid(M.sidebar_winid) then
+		vim.api.nvim_win_close(M.sidebar_winid, true)
+		vim.api.nvim_buf_delete(M.sidebar_bufnr, { force = true })
+		M.sidebar_winid = -1
+		M.sidebar_bufnr = -1
 	else
 		M.open_sidebar()
 	end
 end
 
-local ns = vim.api.nvim_create_namespace("mysidebar")
+local ns = vim.api.nvim_create_namespace("navstack")
 
 ---@class FileEntry
 ---@field name string
@@ -92,14 +81,14 @@ local ns = vim.api.nvim_create_namespace("mysidebar")
 function M.render_sidebar()
 	if M.file_stack == nil then return end
 
-	local buf = sidebar_bufnr
+	local buf = M.sidebar_bufnr
 
 	-- Free the buffer to draw in
-	vim.bo[sidebar_bufnr].modifiable = true
+	vim.bo[M.sidebar_bufnr].modifiable = true
 
 	-- Set the actual lines (one per entry)
 	local lines = {}
-	for i, entry in ipairs(M.file_stack) do
+	for _, entry in ipairs(M.file_stack) do
 		local padding = "  "
 		if entry.is_current then
 			if M.config.sidebar.show_current then
@@ -126,7 +115,7 @@ function M.render_sidebar()
 			})
 
 			vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, {
-				virt_text = { { "→" , "Special" } },
+				virt_text = { { "→", "Special" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
 			})
 		else
@@ -146,9 +135,9 @@ function M.render_sidebar()
 	end
 
 	-- Now lock the buffer
-	vim.bo[sidebar_bufnr].modifiable = false
+	vim.bo[M.sidebar_bufnr].modifiable = false
 
-	vim.api.nvim_buf_set_keymap(sidebar_bufnr, "n", "<CR>", "", {
+	vim.api.nvim_buf_set_keymap(M.sidebar_bufnr, "n", "<CR>", "", {
 		noremap = true,
 		silent = true,
 		callback = function()
@@ -267,7 +256,7 @@ function M.on_buffer_enter()
 		is_current = true,
 	})
 
-	if sidebar_winid and vim.api.nvim_win_is_valid(sidebar_winid) then
+	if M.sidebar_winid and vim.api.nvim_win_is_valid(M.sidebar_winid) then
 		M.render_sidebar()
 	end
 end
@@ -293,7 +282,7 @@ function M.open_entry(number)
 	local wins = vim.api.nvim_list_wins()
 	local target_win = -1
 	for _, win in ipairs(wins) do
-		if win ~= sidebar_winid and vim.api.nvim_win_get_buf(win) ~= sidebar_bufnr then
+		if win ~= M.sidebar_winid and vim.api.nvim_win_get_buf(win) ~= M.sidebar_bufnr then
 			target_win = win
 			break
 		end
@@ -321,16 +310,16 @@ function M.on_navstack_enter()
 	M.internal_jump = true
 end
 
----@param config Config | nil
-function M.setup(config)
-	M.config = vim.tbl_deep_extend("force", M.config, config or {})
+---@param customConfig Config | nil
+function M.setup(customConfig)
+	M.config = Config:create(customConfig)
 
 	if M.config.sidebar.open_on_start then
 		M.open_sidebar()
 	end
 
-	vim.api.nvim_create_user_command('SidebarToggle', M.toggle_sidebar, {})
-	vim.api.nvim_create_user_command('SidebarOpen', M.open_sidebar, {})
+	vim.api.nvim_create_user_command('NavstackToggle', M.toggle_sidebar, {})
+	vim.api.nvim_create_user_command('NavstackOpen', M.open_sidebar, {})
 
 	vim.api.nvim_create_autocmd("BufEnter", {
 		pattern = "*",
