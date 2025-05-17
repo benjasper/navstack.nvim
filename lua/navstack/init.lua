@@ -25,10 +25,19 @@ function M.jump_to_next()
 	M.filestack:jump_to_next()
 end
 
+function M.clear()
+	M.filestack:clear()
+end
+
 ---@param customConfig Config | nil
 function M.setup(customConfig)
 	local config = Config:create(customConfig)
 	local filestack = Filestack:new(config)
+
+	if config.persist_to_disk then
+		filestack:load()
+	end
+
 	M.filestack = filestack
 
 	if config.sidebar.open_on_start then
@@ -39,14 +48,6 @@ function M.setup(customConfig)
 	vim.api.nvim_create_user_command('NavstackOpen', function() filestack:open_sidebar() end, {})
 
 	filestack:register_autocommands()
-
-	for i = 1, 9 do
-		vim.keymap.set("n", "<leader>" .. tostring(i), function() filestack:open_entry(i) end,
-			{ noremap = true, silent = true })
-	end
-
-	vim.keymap.set("n", "<C-p>", function() filestack:jump_to_previous() end, { noremap = true, silent = true })
-	vim.keymap.set("n", "<C-n>", function() filestack:jump_to_next() end, { noremap = true, silent = true })
 end
 
 return M

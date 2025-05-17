@@ -21,9 +21,11 @@
 - [x] Diagnostic marker
 - [x] File modified marker
 - [x] Better filetype exclusion
-- [ ] Max length of stack
-- [ ] Save list to disk per cwd
-- [ ] Clear list
+- [x] Max length of stack
+- [x] Save list to disk per cwd
+- [x] Clear list
+- [ ] Icon support
+- [ ] Auto resize sidebar
 - [ ] Custom highlight groups
 - [ ] Git support
 - [ ] Pin buffer to specific number

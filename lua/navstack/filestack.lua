@@ -205,11 +205,23 @@ end
 
 ---@param bufnr number
 function Filestack:is_real_file_buffer(bufnr)
-	local buftype = vim.bo[bufnr].buftype
-	local name = vim.api.nvim_buf_get_name(bufnr)
-	local listed = vim.fn.buflisted(bufnr) == 1
+	-- Ignore unloaded buffers
+	if not vim.api.nvim_buf_is_loaded(bufnr) then return false end
 
-	return listed and buftype == "" and name ~= ""
+	local name = vim.api.nvim_buf_get_name(bufnr)
+	if name == '' then return false end
+
+	-- Use vim.bo[bufnr] instead of deprecated API
+	local buftype = vim.bo[bufnr].buftype
+	if buftype ~= "" then return false end
+
+	local filetype = vim.bo[bufnr].filetype
+
+	if self.config.ignored_filetypes[filetype] then return false end
+
+	-- Final check: is this a real file on disk?
+	local stat = vim.uv.fs_stat(name)
+	return stat and stat.type == "file"
 end
 
 ---@param filepath string
@@ -252,7 +264,7 @@ function Filestack:on_buffer_enter()
 		for i, entry in ipairs(self.file_stack) do
 			entry.is_current = false
 
-			if entry.path == relative_path and entry.name == filename then
+			if entry.full_path == full_path then
 				jump_to = i
 				entry.is_current = true
 			end
@@ -305,8 +317,81 @@ function Filestack:on_buffer_enter()
 
 	table.insert(self.file_stack, 1, new_entry)
 
+	-- Remove entries that are over the limit
+	if #self.file_stack > self.config.max_files then
+		table.remove(self.file_stack, #self.file_stack - self.config.max_files + 1)
+	end
+
+	-- Persist asynchronously
+	if self.config.persist_to_disk then
+		vim.schedule(function()
+			self:persist()
+		end)
+	end
+
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		self:render_sidebar()
+	end
+end
+
+local function get_temp_file_path(name)
+	local temp_dir = vim.fn.stdpath("cache")
+	local cwd = vim.fn.getcwd()
+	local hash = vim.fn.sha256(cwd):sub(1, 16) -- shorten for path friendliness
+	local dir = temp_dir .. "/navstack/" .. hash
+	vim.fn.mkdir(dir, "p")
+	return dir .. "/" .. name
+end
+
+function Filestack:persist()
+	local file_path = get_temp_file_path("files.json")
+
+	local serialized_files = {}
+
+	for _, file_entry in ipairs(self.file_stack) do
+		table.insert(serialized_files, file_entry:serialize())
+	end
+
+	local contents = vim.json.encode(serialized_files)
+
+	local f = io.open(file_path, "w")
+	if not f then
+		vim.notify("Failed to open file for writing: " .. file_path, vim.log.levels.ERROR)
+		return
+	end
+
+	f:write(contents)
+	f:close()
+end
+
+function Filestack:load()
+	local file_path = get_temp_file_path("files.json")
+	if not vim.uv.fs_stat(file_path) then
+		return
+	end
+
+	local f = io.open(file_path, "r")
+	if not f then
+		vim.notify("Failed to open file for reading: " .. file_path, vim.log.levels.ERROR)
+		return
+	end
+
+	local contents = f:read("*a")
+	f:close()
+
+	local deserialized_files = vim.json.decode(contents)
+
+	for _, file_entry in ipairs(deserialized_files) do
+		local full_path = file_entry.full_path
+		local new_entry = FileEntry:new(
+			vim.fn.fnamemodify(full_path, ":t"),
+			vim.fn.fnamemodify(full_path, ":.:h"),
+			false,
+			file_entry.is_temporary,
+			full_path
+		)
+
+		table.insert(self.file_stack, new_entry)
 	end
 end
 
@@ -345,6 +430,12 @@ function Filestack:open_entry(number, force_internal_jump, target_win)
 	if vim.api.nvim_get_current_win() ~= target_win then
 		vim.api.nvim_set_current_win(target_win)
 	end
+end
+
+function Filestack:clear()
+	self.file_stack = {}
+	self:persist()
+	self:render_sidebar()
 end
 
 function Filestack:open_entry_at_cursor()

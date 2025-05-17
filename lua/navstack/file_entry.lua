@@ -12,6 +12,7 @@ local FileEntry = {}
 ---@param path string
 ---@param is_current boolean
 ---@param is_temporary boolean
+---@param full_path string
 function FileEntry:new(name, path, is_current, is_temporary, full_path)
 	local obj = {
 		name = name,
@@ -26,6 +27,19 @@ function FileEntry:new(name, path, is_current, is_temporary, full_path)
 	setmetatable(obj, self)
 	self.__index = self
 	return obj
+end
+
+---@class SerializedFile
+---@field full_path string
+---@field is_temporary boolean
+---@field is_current boolean
+
+---@return SerializedFile
+function FileEntry:serialize()
+	return {
+		is_temporary = self.is_temporary,
+		full_path = self.full_path,
+	}
 end
 
 ---@param diagnostics table<vim.diagnostic.Severity, integer>
