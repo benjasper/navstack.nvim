@@ -17,6 +17,7 @@
 ## Roadmap
 - [x] Prev and next file
 - [x] Ignore files outside cwd
+- [ ] Open buffer in current window
 - [ ] Save list to disk per cwd
 - [ ] Custom highlight groups
 - [ ] Clear list

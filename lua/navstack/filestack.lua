@@ -274,7 +274,13 @@ function Filestack:on_buffer_enter()
 
 	local is_temporary = self.config.cwd_only and not self:is_in_cwd(full_path)
 
-	table.insert(self.file_stack, 1, FileEntry:new(filename, relative_path, true, is_temporary))
+	table.insert(self.file_stack, 1, FileEntry:new(
+		filename,
+		relative_path,
+		true,
+		is_temporary,
+		full_path
+	))
 
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		self:render_sidebar()
@@ -296,7 +302,7 @@ function Filestack:open_entry(number, force_internal_jump)
 
 	if not entry then return end
 
-	local fname = vim.fn.expand(entry.path) -- expand ~ to home
+	local fname = vim.fn.expand(entry.full_path) -- expand ~ to home
 
 	-- Get window where sidebar is open
 	-- We want to open file in the *other* window
