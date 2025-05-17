@@ -332,18 +332,35 @@ end
 
 function Filestack:open_entry_at_cursor()
 	-- Find main window
-		local wins = vim.api.nvim_list_wins()
-		local found_win = -1
-		for _, win in ipairs(wins) do
-			if win ~= self.sidebar_winid and vim.api.nvim_win_get_buf(win) ~= self.sidebar_bufnr then
-				found_win = win
-				break
-			end
+	local wins = vim.api.nvim_list_wins()
+	local found_win = -1
+	for _, win in ipairs(wins) do
+		if win ~= self.sidebar_winid and vim.api.nvim_win_get_buf(win) ~= self.sidebar_bufnr then
+			found_win = win
+			break
 		end
+	end
 
 	local line = vim.api.nvim_win_get_cursor(0)[1] -- 1-based line under cursor
 
 	self:open_entry(line, nil, found_win)
+end
+
+function Filestack:on_navstack_enter()
+	if not self.config.quit_when_last_window then
+		return
+	end
+
+	-- Check if there's only one window open
+	if vim.fn.winnr('$') == 1 then
+		-- Check if this is your plugin's window (you might want to add custom logic here)
+		-- For example, check buffer filetype, name, or some custom variable
+		local buf_ft = vim.bo.filetype
+		if buf_ft == FILE_TYPE then
+			-- Close the window
+			vim.cmd('quit')
+		end
+	end
 end
 
 ---@param bufnr number
@@ -402,11 +419,10 @@ function Filestack:register_autocommands()
 		group = group,
 	})
 
-	-- vim.api.nvim_create_autocmd("BufEnter", {
-	-- 	pattern = "navstack://*",
-	-- 	callback = function() filestack:on_navstack_enter() end,
-	-- })
-	--
+	vim.api.nvim_create_autocmd("BufEnter", {
+		pattern = "navstack://*",
+		callback = function() self:on_navstack_enter() end,
+	})
 
 	vim.api.nvim_create_autocmd("BufModifiedSet", {
 		callback = function(args)
