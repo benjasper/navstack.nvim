@@ -22,7 +22,7 @@
 - [ ] Custom highlight groups
 - [ ] Clear list
 - [ ] Git support
-- [ ] File changed marker
+- [x] File changed marker
 - [ ] Diagnostic marker
 - [ ] Pin buffer to specific number
 - [ ] Better filetype exclusion

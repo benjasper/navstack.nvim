@@ -38,26 +38,7 @@ function M.setup(customConfig)
 	vim.api.nvim_create_user_command('NavstackToggle', function() filestack:toggle_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackOpen', function() filestack:open_sidebar() end, {})
 
-	local group = vim.api.nvim_create_augroup("Navstack", { clear = true })
-
-	vim.api.nvim_create_autocmd("BufEnter", {
-		pattern = "*",
-		callback = function() filestack:on_buffer_enter() end,
-		group = group,
-	})
-
-	-- vim.api.nvim_create_autocmd("BufEnter", {
-	-- 	pattern = "navstack://*",
-	-- 	callback = function() filestack:on_navstack_enter() end,
-	-- })
-	--
-	vim.api.nvim_create_autocmd("BufModifiedSet", {
-		callback = function(args)
-			local bufnr = args.buf
-			filestack:on_buffer_modified(bufnr)
-		end,
-		group = group,
-	})
+	filestack:register_autocommands()
 
 	for i = 1, 9 do
 		vim.keymap.set("n", "<leader>" .. tostring(i), function() filestack:open_entry(i) end,

@@ -107,7 +107,7 @@ function Filestack:render_sidebar()
 			})
 		else
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
-				virt_text = { { tostring(i) .. ".", "Special" } },
+				virt_text = { { tostring(i), "Special" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
 			})
 		end
@@ -330,6 +330,39 @@ function Filestack:on_buffer_modified(bufnr)
 			break
 		end
 	end
+end
+
+function Filestack:register_autocommands()
+	local group = vim.api.nvim_create_augroup("Navstack", { clear = true })
+
+	vim.api.nvim_create_autocmd("BufEnter", {
+		pattern = "*",
+		callback = function() self:on_buffer_enter() end,
+		group = group,
+	})
+
+	-- vim.api.nvim_create_autocmd("BufEnter", {
+	-- 	pattern = "navstack://*",
+	-- 	callback = function() filestack:on_navstack_enter() end,
+	-- })
+	--
+
+	vim.api.nvim_create_autocmd("BufModifiedSet", {
+		callback = function(args)
+			local bufnr = args.buf
+			self:on_buffer_modified(bufnr)
+		end,
+		group = group,
+	})
+
+	vim.api.nvim_create_autocmd("BufWritePost", {
+		callback = function(args)
+			local bufnr = args.buf
+			self:on_buffer_modified(bufnr)
+		end,
+		group = group,
+	})
+
 end
 
 return Filestack
