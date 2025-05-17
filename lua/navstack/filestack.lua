@@ -71,6 +71,14 @@ function Filestack:open_sidebar()
 	-- Write content
 	self:render_sidebar()
 
+	vim.api.nvim_buf_set_keymap(self.sidebar_bufnr, "n", "<CR>", "", {
+		noremap = true,
+		silent = true,
+		callback = function()
+			self:open_entry_at_cursor()
+		end,
+	})
+
 	-- Restore focus to original window
 	vim.api.nvim_set_current_win(current_win)
 end
@@ -143,14 +151,6 @@ function Filestack:render_sidebar()
 
 	-- Now lock the buffer
 	vim.bo[self.sidebar_bufnr].modifiable = false
-
-	vim.api.nvim_buf_set_keymap(self.sidebar_bufnr, "n", "<CR>", "", {
-		noremap = true,
-		silent = true,
-		callback = function()
-			self:open_entry_at_cursor()
-		end,
-	})
 end
 
 function Filestack:jump_to_next()
@@ -295,7 +295,8 @@ end
 
 ---@param number number
 ---@param force_internal_jump boolean | nil
-function Filestack:open_entry(number, force_internal_jump)
+---@param target_win number | nil
+function Filestack:open_entry(number, force_internal_jump, target_win)
 	if not self.config.direct_jump_as_new_entry or force_internal_jump then
 		self.internal_jump = true
 	end
@@ -314,13 +315,8 @@ function Filestack:open_entry(number, force_internal_jump)
 	-- We want to open file in the *other* window
 	-- So get all windows and find one that isn't sidebar_win
 
-	local wins = vim.api.nvim_list_wins()
-	local target_win = -1
-	for _, win in ipairs(wins) do
-		if win ~= self.sidebar_winid and vim.api.nvim_win_get_buf(win) ~= self.sidebar_bufnr then
-			target_win = win
-			break
-		end
+	if not target_win then
+		target_win = vim.api.nvim_get_current_win()
 	end
 
 	-- Load or get buffer for file
@@ -328,12 +324,26 @@ function Filestack:open_entry(number, force_internal_jump)
 
 	-- Switch target window to that buffer
 	vim.api.nvim_win_set_buf(target_win, buf_handle)
+
+	if vim.api.nvim_get_current_win() ~= target_win then
+		vim.api.nvim_set_current_win(target_win)
+	end
 end
 
 function Filestack:open_entry_at_cursor()
+	-- Find main window
+		local wins = vim.api.nvim_list_wins()
+		local found_win = -1
+		for _, win in ipairs(wins) do
+			if win ~= self.sidebar_winid and vim.api.nvim_win_get_buf(win) ~= self.sidebar_bufnr then
+				found_win = win
+				break
+			end
+		end
+
 	local line = vim.api.nvim_win_get_cursor(0)[1] -- 1-based line under cursor
 
-	self:open_entry(line)
+	self:open_entry(line, nil, found_win)
 end
 
 ---@param bufnr number
