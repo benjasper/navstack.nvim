@@ -9,6 +9,7 @@ FileEntry = require "navstack.file_entry"
 Filestack = {}
 
 local FILE_TYPE = "navstack"
+local ns = vim.api.nvim_create_namespace("navstack")
 
 ---@param config Config
 ---@return Filestack
@@ -71,8 +72,6 @@ function Filestack:toggle_sidebar()
 	end
 end
 
-local ns = vim.api.nvim_create_namespace("navstack")
-
 function Filestack:render_sidebar()
 	if self.file_stack == nil then return end
 
@@ -83,15 +82,14 @@ function Filestack:render_sidebar()
 
 	-- Set the actual lines (one per entry)
 	local lines = {}
-	for _, entry in ipairs(self.file_stack) do
+	for index, entry in ipairs(self.file_stack) do
 		local padding = "  "
-		if entry.is_current then
-			if self.config.sidebar.show_current then
-				table.insert(lines, padding .. entry.name)
-			end
-		else
-			table.insert(lines, padding .. entry.name)
+		local icon = ""
+		if entry.is_temporary then
+			icon = "⚠️"
 		end
+
+		table.insert(lines, padding .. icon .. entry.name)
 	end
 
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
@@ -125,6 +123,14 @@ function Filestack:render_sidebar()
 			vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, {
 				virt_text = { { tostring(i) .. ".", "Special" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
+			})
+		end
+
+		if entry.is_temporary then
+			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
+				end_line = i,
+				hl_group = "DiagnosticWarn",
+				hl_eol = true, -- highlight to the end of line
 			})
 		end
 	end
@@ -163,7 +169,7 @@ function Filestack:jump_to_next()
 		jump_to = #self.file_stack
 	end
 
-	self:open_entry(jump_to)
+	self:open_entry(jump_to, true)
 end
 
 function Filestack:jump_to_previous()
@@ -188,12 +194,11 @@ function Filestack:jump_to_previous()
 		jump_to = 1
 	end
 
-	self:open_entry(jump_to)
+	self:open_entry(jump_to, true)
 end
 
-local function is_real_file_buffer(bufnr)
-	bufnr = bufnr or vim.api.nvim_get_current_buf()
-
+---@param bufnr number
+function Filestack:is_real_file_buffer(bufnr)
 	local buftype = vim.bo[bufnr].buftype
 	local name = vim.api.nvim_buf_get_name(bufnr)
 	local listed = vim.fn.buflisted(bufnr) == 1
@@ -201,20 +206,30 @@ local function is_real_file_buffer(bufnr)
 	return listed and buftype == "" and name ~= ""
 end
 
+---@param filepath string
+function Filestack:is_in_cwd(filepath)
+	local cwd = vim.fn.getcwd()
+	local normalized_cwd = vim.fs.normalize(cwd)
+	local normalized_path = vim.fs.normalize(filepath)
+
+	return normalized_path:sub(1, #normalized_cwd) == normalized_cwd
+end
+
 function Filestack:on_buffer_enter()
 	local full_path = vim.api.nvim_buf_get_name(0)
+	local bufnr = vim.api.nvim_get_current_buf()
 
 	local exclude_patterns = {
 		"oil://*",
 		"navstack://*",
 	}
 
-	if full_path == "" or not is_real_file_buffer() then
+	if full_path == "" or not self:is_real_file_buffer(bufnr) then
 		return
 	end
 
 	local filename = vim.fn.fnamemodify(full_path, ":t")
-	local relative_path = vim.fn.fnamemodify(full_path, ":.")
+	local relative_path = vim.fn.fnamemodify(full_path, ":.:h")
 
 	-- Ignore files that match the exclude patterns
 	for _, pattern in ipairs(exclude_patterns) do
@@ -244,19 +259,22 @@ function Filestack:on_buffer_enter()
 		return
 	end
 
-	-- add filename at top of stack (avoid duplicates)
-	for i, file in ipairs(self.file_stack) do
+	-- search for files that should be removed from the stack
+	for i = #self.file_stack, 1, -1 do
+		local file = self.file_stack[i]
+
 		if file.is_current then
 			file.is_current = false
 		end
 
-		-- if its the same file don't add it again
-		if file.name == filename and file.path == relative_path then
+		if file.is_temporary or (file.name == filename and file.path == relative_path) then
 			table.remove(self.file_stack, i)
 		end
 	end
 
-	table.insert(self.file_stack, 1, FileEntry:new(filename, relative_path, true, false))
+	local is_temporary = self.config.cwd_only and not self:is_in_cwd(full_path)
+
+	table.insert(self.file_stack, 1, FileEntry:new(filename, relative_path, true, is_temporary))
 
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		self:render_sidebar()
@@ -264,8 +282,11 @@ function Filestack:on_buffer_enter()
 end
 
 ---@param number number
-function Filestack:open_entry(number)
-	self.internal_jump = true
+---@param force_internal_jump boolean | nil
+function Filestack:open_entry(number, force_internal_jump)
+	if not self.config.direct_jump_as_new_entry or force_internal_jump then
+		self.internal_jump = true
+	end
 
 	local entry = self.file_stack[number]
 	if not entry then
@@ -301,11 +322,6 @@ function Filestack:open_entry_at_cursor()
 	local line = vim.api.nvim_win_get_cursor(0)[1] -- 1-based line under cursor
 
 	self:open_entry(line)
-end
-
-function Filestack:on_navstack_enter()
-	-- Next jump will be internal
-	self.internal_jump = true
 end
 
 return Filestack

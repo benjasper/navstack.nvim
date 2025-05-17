@@ -43,10 +43,10 @@ function M.setup(customConfig)
 		callback = function() filestack:on_buffer_enter() end,
 	})
 
-	vim.api.nvim_create_autocmd("BufEnter", {
-		pattern = "navstack://*",
-		callback = function() filestack:on_navstack_enter() end,
-	})
+	-- vim.api.nvim_create_autocmd("BufEnter", {
+	-- 	pattern = "navstack://*",
+	-- 	callback = function() filestack:on_navstack_enter() end,
+	-- })
 
 	for i = 1, 9 do
 		vim.keymap.set("n", "<leader>" .. tostring(i), function() filestack:open_entry(i) end, { noremap = true, silent = true })
