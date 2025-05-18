@@ -25,7 +25,7 @@ Using lazy.nvim:
 		-- Make your own keybindings:
 		-- Map the keys to jump to a list entry, here it's <leader>1-9
 		for i = 1, 9 do
-			vim.keymap.set("n", "<leader>" .. tostring(i), function() navstack.open_entry(i) end, { noremap = true, silent = true })
+			vim.keymap.set("n", "<leader>" .. tostring(i), function() navstack.jump_to(i) end, { noremap = true, silent = true })
 		end
 
 		-- Previous and next file

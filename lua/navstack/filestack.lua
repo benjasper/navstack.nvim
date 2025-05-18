@@ -181,7 +181,7 @@ function Filestack:jump_to_next()
 		jump_to = #self.file_stack
 	end
 
-	self:open_entry(jump_to, true)
+	self:jump_to(jump_to, true)
 end
 
 function Filestack:jump_to_previous()
@@ -206,7 +206,7 @@ function Filestack:jump_to_previous()
 		jump_to = 1
 	end
 
-	self:open_entry(jump_to, true)
+	self:jump_to(jump_to, true)
 end
 
 ---@param bufnr number
@@ -404,7 +404,7 @@ end
 ---@param number number
 ---@param force_internal_jump boolean | nil
 ---@param target_win number | nil
-function Filestack:open_entry(number, force_internal_jump, target_win)
+function Filestack:jump_to(number, force_internal_jump, target_win)
 	if not self.config.direct_jump_as_new_entry or force_internal_jump then
 		self.internal_jump = true
 	end
@@ -457,7 +457,7 @@ function Filestack:open_entry_at_cursor()
 
 	local line = vim.api.nvim_win_get_cursor(0)[1] -- 1-based line under cursor
 
-	self:open_entry(line, nil, found_win)
+	self:jump_to(line, nil, found_win)
 end
 
 function Filestack:on_navstack_enter()
