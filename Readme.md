@@ -1,9 +1,23 @@
-# Navstack
+<div align="center">
+
+# navstack.nvim
 
 Easy shortcut navigation through your project with a stack of recently visited files.
 
-## Workflow
+https://github.com/user-attachments/assets/c4b1f694-5e26-42e3-8087-02b5bc76b2db
+
+</div>
+
+## ✨ Features
 - Keeps a list of recently visited files for fast access that updates automatically as you navigate through your project
+- Shows visited files in a vsplit
+- New vistited files are added on top
+- Open files by jumping directly to its stack position
+- Iterate over your file history
+- See which buffers have diagnostics or are still modified
+- Persists history per cwd
+
+## 👍🏻 Recommended workflow
 - Jump to a specific file by pressing a key combination (e.g.: `<leader>2`)
 - Iterate through the list with `<C-p>` and `<C-n>`
 - Clear the list when you're working on a different part of your project
