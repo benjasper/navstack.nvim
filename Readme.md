@@ -22,21 +22,21 @@ Using lazy.nvim:
             --- override_config
         })
 
-        -- Make your own keybindings:
-        -- Map the keys to jump to a list entry, here it's <leader>1-9
-	for i = 1, 9 do
-		vim.keymap.set("n", "<leader>" .. tostring(i), function() navstack.open_entry(i) end, { noremap = true, silent = true })
-	end
+		-- Make your own keybindings:
+		-- Map the keys to jump to a list entry, here it's <leader>1-9
+		for i = 1, 9 do
+			vim.keymap.set("n", "<leader>" .. tostring(i), function() navstack.open_entry(i) end, { noremap = true, silent = true })
+		end
 
-        -- Previous and next file
-	vim.keymap.set("n", "<C-p>", function() navstack.jump_to_previous() end, { noremap = true, silent = true })
-	vim.keymap.set("n", "<C-n>", function() navstack.jump_to_next() end, { noremap = true, silent = true })
+		-- Previous and next file
+		vim.keymap.set("n", "<C-p>", function() navstack.jump_to_previous() end, { noremap = true, silent = true })
+		vim.keymap.set("n", "<C-n>", function() navstack.jump_to_next() end, { noremap = true, silent = true })
 
-        -- Toggle sidebar
-	vim.keymap.set("n", "<leader>n", function() navstack.toggle_sidebar() end, { noremap = true, silent = true })
+		-- Toggle sidebar
+		vim.keymap.set("n", "<leader>n", function() navstack.toggle_sidebar() end, { noremap = true, silent = true })
 
-        -- Clear list
-	vim.keymap.set("n", "<leader>cn", function() navstack.clear() end, { noremap = true, silent = true })
+		-- Clear list
+		vim.keymap.set("n", "<leader>cn", function() navstack.clear() end, { noremap = true, silent = true })
 	end
 }
 ```
