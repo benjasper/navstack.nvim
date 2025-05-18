@@ -26,7 +26,7 @@ https://github.com/user-attachments/assets/c4b1f694-5e26-42e3-8087-02b5bc76b2db
 Using lazy.nvim:
 ```lua
 {
-	dir = "benjasper/navstack.nvim",
+	"benjasper/navstack.nvim",
 	dependencies = {
 		{ 'echasnovski/mini.icons', version = '*' }, -- or { 'nvim-tree/nvim-web-devicons', version = '*' }
 	},
