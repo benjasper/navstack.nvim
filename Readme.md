@@ -8,6 +8,42 @@ Easy shortcut navigation through your project with a stack of recently visited f
 - Iterate through the list with `<C-p>` and `<C-n>`
 - Clear the list when you're working on a different part of your project
 
+## Installation
+Using lazy.nvim:
+```lua
+{
+	dir = "benjasper/navstack.nvim",
+	dependencies = {
+		{ 'echasnovski/mini.icons', version = '*' }, -- or { 'nvim-tree/nvim-web-devicons', version = '*' }
+	},
+	config = function()
+		local navstack = require("navstack")
+		navstack.setup({
+            --- override_config
+        })
+
+        -- Make your own keybindings:
+        -- Map the keys to jump to a list entry, here it's <leader>1-9
+		for i = 1, 9 do
+			vim.keymap.set("n", "<leader>" .. tostring(i), function() navstack.open_entry(i) end,
+				{ noremap = true, silent = true })
+		end
+
+        -- Previous and next file
+		vim.keymap.set("n", "<C-p>", function() navstack.jump_to_previous() end, { noremap = true, silent = true })
+		vim.keymap.set("n", "<C-n>", function() navstack.jump_to_next() end, { noremap = true, silent = true })
+
+        -- Toggle sidebar
+		vim.keymap.set("n", "<leader>n", function() navstack.toggle_sidebar() end, { noremap = true, silent = true })
+
+        -- Clear list
+		vim.keymap.set("n", "<leader>cn", function() navstack.clear() end, { noremap = true, silent = true })
+	end
+}
+```
+
+You can find all the config options and their default values here: [config.lua](lua/navstack/config.lua)
+
 ## Concept
 - Every file visit puts a list entry on top of the stack -> list of recently visited files
 - You can jump to any file in the list, which will place it on top of the stack again
