@@ -19,8 +19,8 @@ Using lazy.nvim:
 	config = function()
 		local navstack = require("navstack")
 		navstack.setup({
-            --- override_config
-        })
+			--- override_config
+		})
 
 		-- Make your own keybindings:
 		-- Map the keys to jump to a list entry, here it's <leader>1-9
