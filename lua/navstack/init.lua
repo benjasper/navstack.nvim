@@ -13,6 +13,10 @@ function M.open_sidebar()
 	M.filestack:open_sidebar()
 end
 
+function M.close_sidebar()
+	M.filestack:close_sidebar()
+end
+
 function M.jump_to(number)
 	M.filestack:jump_to(number)
 end
@@ -46,6 +50,7 @@ function M.setup(customConfig)
 
 	vim.api.nvim_create_user_command('NavstackToggle', function() filestack:toggle_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackOpen', function() filestack:open_sidebar() end, {})
+	vim.api.nvim_create_user_command('NavstackClose', function() filestack:close_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackClear', function() filestack:clear() end, {})
 
 	filestack:register_autocommands()

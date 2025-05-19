@@ -35,67 +35,82 @@ function Filestack:new(config)
 end
 
 function Filestack:open_sidebar()
-	-- If already open, don't open again
+	-- If already open, just switch to it
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		vim.api.nvim_set_current_win(self.sidebar_winid)
 		return
 	end
 
-	-- Save the current window to return focus later (optional)
+	-- Save the current window to return focus later
 	local current_win = vim.api.nvim_get_current_win()
 
-	-- Create a new vertical split on the left
-	-- vim.cmd('topleft vnew')
-	vim.cmd('botright vnew')
-	self.sidebar_winid = vim.api.nvim_get_current_win()
-	self.sidebar_bufnr = vim.api.nvim_get_current_buf()
+	-- Create or reuse buffer
+	if not self.sidebar_bufnr or not vim.api.nvim_buf_is_valid(self.sidebar_bufnr) then
+		self.sidebar_bufnr = vim.api.nvim_create_buf(false, true) -- [listed = false, scratch = true]
+	end
 
-	-- Buffer options
-	-- Set buffer options first, but leave modifiable = true for now
+	-- Setup buffer options
 	vim.bo[self.sidebar_bufnr].buftype = 'nofile'
-	vim.bo[self.sidebar_bufnr].bufhidden = 'wipe'
+	vim.bo[self.sidebar_bufnr].bufhidden = 'hide'
 	vim.bo[self.sidebar_bufnr].swapfile = false
 	vim.bo[self.sidebar_bufnr].filetype = FILE_TYPE
-	vim.bo[self.sidebar_bufnr].bufhidden = 'hide'
 	vim.bo[self.sidebar_bufnr].buflisted = false
-
 	vim.api.nvim_buf_set_name(self.sidebar_bufnr, 'navstack://')
 
-	-- Window options
+	-- Create window (non-floating, anchored to side like vsplit)
+	self.sidebar_winid = vim.api.nvim_open_win(self.sidebar_bufnr, false, {
+		split = self.config.sidebar.align,
+		width = self.config.sidebar.width,
+	})
+
+	-- Setup window options
 	vim.wo[self.sidebar_winid].number = false
 	vim.wo[self.sidebar_winid].relativenumber = false
 	vim.wo[self.sidebar_winid].winfixwidth = true
 	vim.wo[self.sidebar_winid].signcolumn = 'auto'
-	vim.api.nvim_win_set_width(self.sidebar_winid, self.config.sidebar.width)
 
 	-- Write content
 	self:render_sidebar()
 
-	vim.api.nvim_buf_set_keymap(self.sidebar_bufnr, "n", "<CR>", "", {
-		noremap = true,
-		silent = true,
-		callback = function()
-			self:open_entry_at_cursor()
-		end,
-	})
+	-- Keybindings
+	vim.keymap.set("n", "<CR>", function()
+		self:open_entry_at_cursor()
+	end, { buffer = self.sidebar_bufnr, silent = true, noremap = true })
 
-	-- Restore focus to original window
+	vim.keymap.set("n", "q", function()
+		self:close_sidebar()
+	end, { buffer = self.sidebar_bufnr, silent = true, noremap = true })
+
+	-- Return focus
 	vim.api.nvim_set_current_win(current_win)
+end
+
+function Filestack:close_sidebar()
+	if not self.sidebar_winid or not vim.api.nvim_win_is_valid(self.sidebar_winid) then
+		return
+	end
+
+	-- Close the window and delete the buffer
+	vim.api.nvim_win_close(self.sidebar_winid, true)
+
+	if self.sidebar_bufnr and vim.api.nvim_buf_is_valid(self.sidebar_bufnr) then
+		vim.api.nvim_buf_delete(self.sidebar_bufnr, { force = true })
+	end
+
+	-- Reset state
+	self.sidebar_winid = nil
 end
 
 function Filestack:toggle_sidebar()
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
-		vim.api.nvim_win_close(self.sidebar_winid, true)
-		vim.api.nvim_buf_delete(self.sidebar_bufnr, { force = true })
-		self.sidebar_winid = -1
-		self.sidebar_bufnr = -1
+		self:close_sidebar()
 	else
 		self:open_sidebar()
 	end
 end
 
 function Filestack:render_sidebar()
-	if self.file_stack == nil then return end
+	if self.file_stack == nil or self.sidebar_bufnr == -1 or not vim.api.nvim_buf_is_valid(self.sidebar_bufnr) then return end
 
 	-- Free the buffer to draw in
 	vim.bo[self.sidebar_bufnr].modifiable = true
@@ -470,14 +485,14 @@ function Filestack:on_navstack_enter()
 		return
 	end
 
-	-- Check if there's only one window open
-	if vim.fn.winnr('$') == 1 then
-		-- Check if this is your plugin's window (you might want to add custom logic here)
-		-- For example, check buffer filetype, name, or some custom variable
-		local buf_ft = vim.bo.filetype
-		if buf_ft == FILE_TYPE then
-			-- Close the window
-			vim.cmd('quit')
+	-- Get all listed windows (ignores floating/unlisted)
+	local wins = vim.api.nvim_list_wins()
+	local sidebar_winid = self.sidebar_winid
+	if #wins == 1 and wins[1] == sidebar_winid then
+		local buf = vim.api.nvim_win_get_buf(sidebar_winid)
+		local ft = vim.bo[buf].filetype
+		if ft == FILE_TYPE then
+			vim.cmd("quit")
 		end
 	end
 end
@@ -548,7 +563,7 @@ function Filestack:register_autocommands()
 		group = group,
 	})
 
-	vim.api.nvim_create_autocmd("BufEnter", {
+	vim.api.nvim_create_autocmd("WinEnter", {
 		pattern = "navstack://*",
 		callback = function() self:on_navstack_enter() end,
 	})
