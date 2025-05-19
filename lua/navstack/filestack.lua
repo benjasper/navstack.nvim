@@ -237,13 +237,12 @@ function Filestack:is_real_file_buffer(bufnr)
 	local name = vim.api.nvim_buf_get_name(bufnr)
 	if name == '' then return false end
 
-	-- Use vim.bo[bufnr] instead of deprecated API
 	local buftype = vim.bo[bufnr].buftype
 	if buftype ~= "" then return false end
 
 	local filetype = vim.bo[bufnr].filetype
 
-	if self.config.ignored_filetypes[filetype] then return false end
+	if filetype == "" or self.config.ignored_filetypes[filetype] then return false end
 
 	-- Final check: is this a real file on disk?
 	local stat = vim.uv.fs_stat(name)
