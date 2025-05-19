@@ -114,8 +114,13 @@ function Filestack:render_sidebar()
 	vim.api.nvim_buf_clear_namespace(self.sidebar_bufnr, ns, 0, -1)
 
 	for i, entry in ipairs(self.file_stack) do
-		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2, {
-			end_col = 4,
+		local offset = 0
+		if entry.is_modified then
+			offset = 3
+		end
+
+		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2 + offset, {
+			end_col = 4 + offset,
 			hl_group = entry.icon_hl,
 		})
 
