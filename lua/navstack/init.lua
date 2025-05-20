@@ -44,6 +44,8 @@ function M.setup(customConfig)
 
 	M.filestack = filestack
 
+	filestack:register_autocommands()
+
 	if config.sidebar.open_on_start then
 		filestack:open_sidebar()
 	end
@@ -52,8 +54,6 @@ function M.setup(customConfig)
 	vim.api.nvim_create_user_command('NavstackOpen', function() filestack:open_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackClose', function() filestack:close_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackClear', function() filestack:clear() end, {})
-
-	filestack:register_autocommands()
 end
 
 return M

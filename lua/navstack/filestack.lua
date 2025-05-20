@@ -486,14 +486,30 @@ function Filestack:on_navstack_enter()
 
 	-- Get all listed windows (ignores floating/unlisted)
 	local wins = vim.api.nvim_list_wins()
-	local sidebar_winid = self.sidebar_winid
-	if #wins == 1 and wins[1] == sidebar_winid then
-		local buf = vim.api.nvim_win_get_buf(sidebar_winid)
+	if #wins >= 3 then
+		return
+	end
+
+	if #wins == 1 then
+		local buf = vim.api.nvim_win_get_buf(wins[1])
 		local ft = vim.bo[buf].filetype
-		if ft == FILE_TYPE then
-			vim.cmd("quit")
+		if ft ~= FILE_TYPE then
+			return
+		end
+	else
+		for _, win in ipairs(wins) do
+			local buf = vim.api.nvim_win_get_buf(win)
+			local listed = vim.bo[buf].buflisted
+
+			local ft = vim.bo[buf].filetype
+			-- Ignore our navstack sidebar
+			if ft ~= FILE_TYPE and listed then
+				return
+			end
 		end
 	end
+
+	vim.cmd("quit")
 end
 
 ---@param bufnr number
