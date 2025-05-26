@@ -76,6 +76,8 @@ Differences to the jumplist:
 - [x] Save list to disk per cwd
 - [x] Clear list
 - [x] Icon support
+- [x] Option to ignore gitignored files
+- [ ] Insert mode -> files to top when not yet
 - [ ] Auto resize sidebar
 - [ ] Custom highlight groups
 - [ ] Git support

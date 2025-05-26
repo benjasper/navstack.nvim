@@ -258,6 +258,12 @@ function Filestack:is_in_cwd(filepath)
 	return normalized_path:sub(1, #normalized_cwd) == normalized_cwd
 end
 
+local function is_gitignored(filepath)
+	local output = vim.fn.system({ "git", "check-ignore", filepath })
+	return vim.v.shell_error == 0 and output ~= ""
+end
+
+
 function Filestack:on_buffer_enter()
 	local full_path = vim.api.nvim_buf_get_name(0)
 	local bufnr = vim.api.nvim_get_current_buf()
@@ -322,8 +328,6 @@ function Filestack:on_buffer_enter()
 		end
 	end
 
-	local is_temporary = self.config.cwd_only and not self:is_in_cwd(full_path)
-
 	---@type FileEntry | nil
 	local new_entry = nil
 
@@ -331,6 +335,10 @@ function Filestack:on_buffer_enter()
 		found_file.is_current = true
 		new_entry = found_file
 	else
+		local is_temporary =
+			(self.config.cwd_only and not self:is_in_cwd(full_path)) or
+			(self.config.ignore_gitignored and is_gitignored(full_path))
+
 		new_entry = FileEntry:new(
 			filename,
 			relative_path,
