@@ -577,6 +577,17 @@ function Filestack:on_file_deleted(file_path)
 	end
 end
 
+function Filestack:on_insert_enter()
+	local full_path = vim.api.nvim_buf_get_name(0)
+
+	for entryIndex, entry in ipairs(self.file_stack) do
+		if entry.full_path == full_path and entryIndex ~= 1 then
+			self:on_buffer_enter()
+			break
+		end
+	end
+end
+
 function Filestack:register_autocommands()
 	local group = vim.api.nvim_create_augroup("Navstack", { clear = true })
 
@@ -585,6 +596,14 @@ function Filestack:register_autocommands()
 		callback = function() self:on_buffer_enter() end,
 		group = group,
 	})
+
+	if self.config.insert_mode_on_top then
+		vim.api.nvim_create_autocmd("InsertEnter", {
+			pattern = "*",
+			callback = function() self:on_insert_enter() end,
+			group = group,
+		})
+	end
 
 	vim.api.nvim_create_autocmd("WinEnter", {
 		pattern = "navstack://*",
