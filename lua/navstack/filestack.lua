@@ -302,7 +302,9 @@ function Filestack:on_buffer_enter()
 		end
 
 		if jump_to > 0 then
-			self:render_sidebar()
+			vim.schedule(function()
+				self:render_sidebar()
+			end)
 		end
 
 		return
@@ -363,7 +365,9 @@ function Filestack:on_buffer_enter()
 	end
 
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
-		self:render_sidebar()
+		vim.schedule(function()
+			self:render_sidebar()
+		end)
 	end
 end
 
@@ -468,7 +472,9 @@ end
 function Filestack:clear()
 	self.file_stack = {}
 	self:persist()
-	self:render_sidebar()
+	vim.schedule(function()
+		self:render_sidebar()
+	end)
 end
 
 function Filestack:open_entry_at_cursor()
@@ -530,7 +536,9 @@ function Filestack:on_buffer_modified(bufnr)
 		if entry.full_path == full_path then
 			entry.is_modified = modified
 
-			self:render_sidebar()
+			vim.schedule(function()
+				self:render_sidebar()
+			end)
 			break
 		end
 	end
@@ -564,14 +572,18 @@ function Filestack:on_diagnostic_changed(bufnr)
 
 	foundEntry:set_diagnostics(diagnosticsTable)
 
-	self:render_sidebar()
+	vim.schedule(function()
+		self:render_sidebar()
+	end)
 end
 
 function Filestack:on_file_deleted(file_path)
 	for i, entry in ipairs(self.file_stack) do
 		if entry.full_path == file_path then
 			table.remove(self.file_stack, i)
-			self:render_sidebar()
+			vim.schedule(function()
+				self:render_sidebar()
+			end)
 			break
 		end
 	end
