@@ -199,7 +199,6 @@ function Filestack:render_sidebar()
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2, {
 				end_col = 4,
 				hl_group = "NavstackPinned",
-				hl_eol = true, -- highlight to the end of line
 			})
 		end
 	end
@@ -244,8 +243,11 @@ function Filestack:toggle_pin()
 	table.remove(self.file_stack, current_entry_index)
 	local last_pinned_entry = 0
 	for i, entry in ipairs(self.file_stack) do
-		if not entry.is_pinned then
+		if entry.is_pinned then
 			last_pinned_entry = i
+		end
+
+		if not entry.is_pinned then
 			break
 		end
 	end
