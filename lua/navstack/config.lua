@@ -8,6 +8,8 @@
 ---@field max_files number Maximum number of files to keep in the stack
 ---@field ignored_filetypes table<string, boolean> Filetypes to ignore
 ---@field persist_to_disk boolean Whether to persist the stack to disk, it's saved in the cache directory per cwd
+---@field window_float vim.api.keyset.win_config Config for the floating window
+---@field win_type "sidebar" | "float" Type of window to use
 
 ---@class SidebarConfig
 ---@field align "left" | "right"
@@ -15,6 +17,7 @@
 ---@field open_on_start boolean Whether to open the sidebar on startup
 
 Config = {
+	win_type = "sidebar",
 	sidebar = {
 		align = "right",
 		width = 50,
@@ -36,6 +39,13 @@ Config = {
 		["help"] = true,
 		["nofile"] = true,
 	},
+	window_float = {
+		relative = "editor",
+		width = 40,
+		height = 20,
+		style = "minimal",
+		border = "rounded",
+	}
 }
 
 ---@param custom Config | nil

@@ -46,7 +46,7 @@ function Filestack:open_sidebar()
 
 	-- Create or reuse buffer
 	if not self.sidebar_bufnr or not vim.api.nvim_buf_is_valid(self.sidebar_bufnr) then
-		self.sidebar_bufnr = vim.api.nvim_create_buf(false, true) -- [listed = false, scratch = true]
+		self.sidebar_bufnr = vim.api.nvim_create_buf(false, true)
 	end
 
 	-- Setup buffer options
@@ -57,17 +57,33 @@ function Filestack:open_sidebar()
 	vim.bo[self.sidebar_bufnr].buflisted = false
 	vim.api.nvim_buf_set_name(self.sidebar_bufnr, 'navstack://')
 
-	-- Create window (non-floating, anchored to side like vsplit)
-	self.sidebar_winid = vim.api.nvim_open_win(self.sidebar_bufnr, false, {
-		split = self.config.sidebar.align,
-		width = self.config.sidebar.width,
-	})
+	---@type vim.api.keyset.win_config
+	local window_config = {}
+
+	if self.config.win_type == "float" then
+		local row = 0
+		local col = vim.o.columns - self.config.window_float.width
+
+		window_config = vim.tbl_deep_extend("force", self.config.window_float, {
+			row = row,
+			col = col,
+		})
+	else
+		window_config = {
+			split = self.config.sidebar.align,
+			width = self.config.sidebar.width,
+		}
+	end
+
+	-- Create floating window
+	self.sidebar_winid = vim.api.nvim_open_win(self.sidebar_bufnr, true, window_config)
 
 	-- Setup window options
 	vim.wo[self.sidebar_winid].number = false
 	vim.wo[self.sidebar_winid].relativenumber = false
 	vim.wo[self.sidebar_winid].winfixwidth = true
-	vim.wo[self.sidebar_winid].signcolumn = 'auto'
+	vim.wo[self.sidebar_winid].signcolumn = 'no'
+	vim.wo[self.sidebar_winid].cursorline = true
 
 	-- Write content
 	self:render_sidebar()
