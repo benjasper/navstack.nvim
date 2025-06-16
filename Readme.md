@@ -51,6 +51,10 @@ Using lazy.nvim:
 
 		-- Clear list
 		vim.keymap.set("n", "<leader>cn", function() navstack.clear() end, { noremap = true, silent = true })
+
+		-- Pin a buffer (buffer will stay at the top of the list)
+		vim.keymap.set("n", "<leader>pn", function() navstack.toggle_pin() end, { noremap = true, silent = true })
+
 	end
 }
 ```
@@ -77,9 +81,9 @@ Differences to the jumplist:
 - [x] Clear list
 - [x] Icon support
 - [x] Option to ignore gitignored files
-- [ ] Insert mode -> files to top when not yet
+- [x] Pin buffer to specific number
+- [x] Insert mode -> files to top when not yet
 - [ ] Auto resize sidebar
 - [ ] Custom highlight groups
 - [ ] Git support
-- [ ] Pin buffer to specific number
 - [ ] Support for deleted / moved / renamed files (Maybe when 'file-change detection' is implemented https://neovim.io/roadmap/)

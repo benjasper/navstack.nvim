@@ -33,6 +33,10 @@ function M.clear()
 	M.filestack:clear()
 end
 
+function M.toggle_pin()
+	M.filestack:toggle_pin()
+end
+
 ---@param customConfig Config | nil
 function M.setup(customConfig)
 	local config = Config:create(customConfig)
@@ -54,6 +58,11 @@ function M.setup(customConfig)
 	vim.api.nvim_create_user_command('NavstackOpen', function() filestack:open_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackClose', function() filestack:close_sidebar() end, {})
 	vim.api.nvim_create_user_command('NavstackClear', function() filestack:clear() end, {})
+
+	vim.api.nvim_set_hl(0, "NavstackPinned", { link = "Special" })
+	vim.api.nvim_set_hl(0, "NavstackIndex", { link = "Special" })
+	vim.api.nvim_set_hl(0, "NavstackCurrent", { link = "Special" })
+	vim.api.nvim_set_hl(0, "NavstackPath", { link = "Comment" })
 end
 
 return M

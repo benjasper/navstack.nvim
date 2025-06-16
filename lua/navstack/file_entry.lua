@@ -5,6 +5,7 @@ Utils = require "navstack.utils"
 ---@field path string
 ---@field full_path string
 ---@field is_current boolean
+---@field is_pinned boolean
 ---@field is_temporary boolean
 ---@field is_modified boolean
 ---@field diagnostics table<vim.diagnostic.Severity, integer>
@@ -23,6 +24,7 @@ function FileEntry:new(name, path, is_current, is_temporary, full_path)
 		path = path,
 		is_current = is_current,
 		is_temporary = is_temporary,
+		is_pinned = false,
 		full_path = full_path,
 		is_modified = false,
 		diagnostics = {},
@@ -42,12 +44,14 @@ end
 ---@field full_path string
 ---@field is_temporary boolean
 ---@field is_current boolean
+---@field is_pinned boolean
 
 ---@return SerializedFile
 function FileEntry:serialize()
 	return {
 		is_temporary = self.is_temporary,
 		full_path = self.full_path,
+		is_pinned = self.is_pinned,
 	}
 end
 
@@ -60,6 +64,10 @@ function FileEntry:render_title()
 	local padding = "  "
 
 	local icon = ""
+
+	if self.is_pinned then
+		icon = icon .. "󰐃 "
+	end
 
 	if self.is_modified then
 		icon = icon .. "● "

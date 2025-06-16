@@ -146,8 +146,13 @@ function Filestack:render_sidebar()
 
 	for i, entry in ipairs(self.file_stack) do
 		local offset = 0
+
 		if entry.is_modified then
-			offset = 3
+			offset = 4
+		end
+
+		if entry.is_pinned then
+			offset = offset + 4
 		end
 
 		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2 + offset, {
@@ -158,19 +163,19 @@ function Filestack:render_sidebar()
 		-- Add virtual lines for paths
 		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
 			virt_lines = {
-				{ { "  " .. entry.path, "Comment" } },
+				{ { "  " .. entry.path, "NavstackPath" } },
 			},
 			virt_lines_above = false,
 		})
 
 		if entry.is_current then
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
-				virt_text = { { "→ ", "Special" } },
+				virt_text = { { "→ ", "NavstackCurrent" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
 			})
 		else
 			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 0, {
-				virt_text = { { tostring(i), "Special" } },
+				virt_text = { { tostring(i), "NavstackIndex" } },
 				virt_text_pos = 'overlay', -- so it appears inline before text
 			})
 		end
@@ -189,10 +194,73 @@ function Filestack:render_sidebar()
 				hl_eol = true, -- highlight to the end of line
 			})
 		end
+
+		if entry.is_pinned then
+			vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2, {
+				end_col = 4,
+				hl_group = "NavstackPinned",
+				hl_eol = true, -- highlight to the end of line
+			})
+		end
 	end
 
 	-- Now lock the buffer
 	vim.bo[self.sidebar_bufnr].modifiable = false
+end
+
+function Filestack:toggle_pin()
+	if #self.file_stack <= 1 then
+		return
+	end
+
+	local current_entry = nil
+	local current_entry_index = 0
+	for i, entry in ipairs(self.file_stack) do
+		if entry.is_current then
+			current_entry = entry
+			current_entry_index = i
+			break
+		end
+	end
+
+	if current_entry == nil then
+		return
+	end
+
+	if current_entry.is_pinned then
+		current_entry.is_pinned = false
+
+		vim.schedule(function()
+			self:render_sidebar()
+		end)
+
+		vim.schedule(function()
+			self:persist()
+		end)
+		return
+	end
+
+	-- pop the current entry and insert at the top below the last pinned entry and entries below
+	table.remove(self.file_stack, current_entry_index)
+	local last_pinned_entry = 0
+	for i, entry in ipairs(self.file_stack) do
+		if not entry.is_pinned then
+			last_pinned_entry = i
+			break
+		end
+	end
+
+	current_entry.is_pinned = true
+
+	table.insert(self.file_stack, last_pinned_entry + 1, current_entry)
+
+	vim.schedule(function()
+		self:render_sidebar()
+	end)
+
+	vim.schedule(function()
+		self:persist()
+	end)
 end
 
 function Filestack:jump_to_next()
@@ -341,7 +409,7 @@ function Filestack:on_buffer_enter()
 			found_file = file
 		end
 
-		if file.is_temporary or file.full_path == full_path then
+		if file.is_temporary or (file.full_path == full_path and not file.is_pinned) then
 			table.remove(self.file_stack, i)
 		end
 	end
@@ -366,7 +434,19 @@ function Filestack:on_buffer_enter()
 		)
 	end
 
-	table.insert(self.file_stack, 1, new_entry)
+	-- Insert below all pinned entries
+	local pinned_index = 0
+	for i, entry in ipairs(self.file_stack) do
+		if entry.is_pinned then
+			pinned_index = i
+			break
+		end
+	end
+
+	-- If the file is not pinned, insert it below all pinned entries
+	if not new_entry.is_pinned then
+		table.insert(self.file_stack, pinned_index + 1, new_entry)
+	end
 
 	-- Remove entries that are over the limit
 	while #self.file_stack > self.config.max_files do
@@ -443,6 +523,7 @@ function Filestack:load()
 			file_entry.is_temporary,
 			full_path
 		)
+		new_entry.is_pinned = file_entry.is_pinned
 
 		table.insert(self.file_stack, new_entry)
 	end
