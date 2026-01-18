@@ -9,12 +9,17 @@
 ---@field ignored_filetypes table<string, boolean> Filetypes to ignore
 ---@field persist_to_disk boolean Whether to persist the stack to disk, it's saved in the cache directory per cwd
 ---@field window_float vim.api.keyset.win_config Config for the floating window
----@field win_type "sidebar" | "float" Type of window to use
+---@field win_type "sidebar" | "float" | "tabline" Type of window to use
+---@field tabline_config TabLineConfig
 
 ---@class SidebarConfig
 ---@field align "left" | "right"
 ---@field width number
 ---@field open_on_start boolean Whether to open the sidebar on startup
+
+---@class TabLineConfig
+---@field separator string
+---@field left_padding string
 
 Config = {
 	win_type = "sidebar",
@@ -45,7 +50,11 @@ Config = {
 		height = 20,
 		style = "minimal",
 		border = "rounded",
-	}
+	},
+	tabline_config = {
+		separator = "│",
+		left_padding = "",
+	},
 }
 
 ---@param custom Config | nil

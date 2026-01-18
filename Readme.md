@@ -10,7 +10,7 @@ https://github.com/user-attachments/assets/c4b1f694-5e26-42e3-8087-02b5bc76b2db
 
 ## ✨ Features
 - Keeps a list of recently visited files for fast access that updates automatically as you navigate through your project
-- Shows visited files in a vsplit
+- Shows visited files in a vsplit, a flaoting window or a tabline
 - New vistited files are added on top
 - Open files by jumping directly to its stack position
 - Iterate over your file history

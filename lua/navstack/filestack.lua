@@ -35,6 +35,11 @@ function Filestack:new(config)
 end
 
 function Filestack:open_sidebar()
+	if self.config.win_type == "tabline" then
+		vim.o.winbar = "%!v:lua.RenderNavstackTabline()"
+		return
+	end
+
 	-- If already open, just switch to it
 	if self.sidebar_winid and vim.api.nvim_win_is_valid(self.sidebar_winid) then
 		vim.api.nvim_set_current_win(self.sidebar_winid)
@@ -64,11 +69,11 @@ function Filestack:open_sidebar()
 		local row = 0
 		local col = vim.o.columns - self.config.window_float.width
 
-		window_config = vim.tbl_deep_extend("force", self.config.window_float, {
+		window_config = vim.tbl_deep_extend("force", {
 			row = row,
 			col = col,
-		})
-	else
+		}, self.config.window_float)
+	elseif self.config.win_type == "split" then
 		window_config = {
 			split = self.config.sidebar.align,
 			width = self.config.sidebar.width,
@@ -99,6 +104,48 @@ function Filestack:open_sidebar()
 
 	-- Return focus
 	vim.api.nvim_set_current_win(current_win)
+end
+
+function _G.RenderNavstackTabline()
+	return require("navstack").filestack:render_tabline()
+end
+
+function Filestack:render_tabline()
+	local s = self.config.tabline_config.left_padding
+	local tabs = self.file_stack
+	if #tabs == 0 then return "" end
+
+	local seperator = "%#Comment#" .. " " .. self.config.tabline_config.separator .. " "
+
+	for i, entry in ipairs(tabs) do
+		local is_active = (entry.is_current)
+
+		local hl_index  = is_active and "%#NavstackCurrent#" or "%#NavstackIndex#"
+		local hl_icon   = "%#" .. entry.icon_hl .. "#"
+		local hl_base   = is_active and "%#NavstackTabLineSel#" or "%#NavstackTabLine#"
+		local hl_pinned = "%#NavstackPinned#"
+
+		s               = s .. hl_index .. " " .. i .. " " .. "%*"
+
+		if entry.is_pinned then
+			s = s .. " " .. hl_pinned .. "󰐃" .. "%*"
+		end
+
+		if entry.is_modified then
+			s = s .. " " .. hl_base .. "●" .. "%*"
+		end
+
+		s = s .. hl_icon .. " " .. entry.icon .. "%*"
+		s = s .. hl_base .. " " .. entry.name .. "%*"
+
+		if i ~= #tabs then
+			s = s .. seperator .. "%*"
+		else
+			s = s .. "%<"
+		end
+	end
+
+	return s
 end
 
 function Filestack:close_sidebar()
@@ -554,7 +601,7 @@ function Filestack:jump_to(number, force_internal_jump, target_win)
 	-- So get all windows and find one that isn't sidebar_win
 
 	if not target_win then
-		target_win = vim.api.nvim_get_current_win()
+		target_win = target_win or vim.api.nvim_get_current_win()
 	end
 
 	-- Load or get buffer for file
@@ -581,7 +628,11 @@ function Filestack:open_entry_at_cursor()
 	local wins = vim.api.nvim_list_wins()
 	local found_win = -1
 	for _, win in ipairs(wins) do
-		if win ~= self.sidebar_winid and vim.api.nvim_win_get_buf(win) ~= self.sidebar_bufnr then
+		local buf = vim.api.nvim_win_get_buf(win)
+		if win ~= self.sidebar_winid
+			and buf ~= self.sidebar_bufnr
+			and vim.bo[buf].buflisted
+		then
 			found_win = win
 			break
 		end
