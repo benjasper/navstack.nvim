@@ -34,6 +34,17 @@ function Filestack:new(config)
 	return obj
 end
 
+function Filestack:update_duplicate_name_flags()
+	local counts = {}
+	for _, entry in ipairs(self.file_stack) do
+		counts[entry.name] = (counts[entry.name] or 0) + 1
+	end
+
+	for _, entry in ipairs(self.file_stack) do
+		entry.is_duplicate_name = (counts[entry.name] or 0) > 1
+	end
+end
+
 function Filestack:open_sidebar()
 	if self.config.win_type == "tabline" then
 		vim.o.winbar = "%!v:lua.RenderNavstackTabline()"
@@ -138,6 +149,10 @@ function Filestack:render_tabline()
 		s = s .. hl_icon .. " " .. entry.icon .. "%*"
 		s = s .. hl_base .. " " .. entry.name .. "%*"
 
+		if entry.is_duplicate_name then
+			s = s .. " " .. "%#Comment#" .. entry.path .. "%*"
+		end
+
 		if i ~= #tabs then
 			s = s .. seperator .. "%*"
 		else
@@ -192,18 +207,18 @@ function Filestack:render_sidebar()
 	vim.api.nvim_buf_clear_namespace(self.sidebar_bufnr, ns, 0, -1)
 
 	for i, entry in ipairs(self.file_stack) do
-		local offset = 0
-
-		if entry.is_modified then
-			offset = 4
-		end
+		local offset_for_icon = 0
 
 		if entry.is_pinned then
-			offset = offset + 4
+			offset_for_icon = offset_for_icon + 4
 		end
 
-		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2 + offset, {
-			end_col = 4 + offset,
+		if entry.is_modified then
+			offset_for_icon = offset_for_icon + 4
+		end
+
+		vim.api.nvim_buf_set_extmark(self.sidebar_bufnr, ns, i - 1, 2 + offset_for_icon, {
+			end_col = 4 + offset_for_icon,
 			hl_group = entry.icon_hl,
 		})
 
@@ -277,6 +292,7 @@ function Filestack:toggle_pin()
 		current_entry.is_pinned = false
 
 		vim.schedule(function()
+			self:update_duplicate_name_flags()
 			self:render_sidebar()
 		end)
 
@@ -304,6 +320,7 @@ function Filestack:toggle_pin()
 	table.insert(self.file_stack, last_pinned_entry + 1, current_entry)
 
 	vim.schedule(function()
+		self:update_duplicate_name_flags()
 		self:render_sidebar()
 	end)
 
@@ -502,6 +519,8 @@ function Filestack:on_buffer_enter()
 		table.remove(self.file_stack) -- removes last element by default
 	end
 
+	self:update_duplicate_name_flags()
+
 	-- Persist asynchronously
 	if self.config.persist_to_disk then
 		vim.schedule(function()
@@ -576,6 +595,8 @@ function Filestack:load()
 
 		table.insert(self.file_stack, new_entry)
 	end
+
+	self:update_duplicate_name_flags()
 end
 
 ---@param number number
@@ -617,6 +638,7 @@ end
 
 function Filestack:clear()
 	self.file_stack = {}
+	self:update_duplicate_name_flags()
 	self:persist()
 	vim.schedule(function()
 		self:render_sidebar()
@@ -731,6 +753,7 @@ function Filestack:on_file_deleted(file_path)
 	for i, entry in ipairs(self.file_stack) do
 		if entry.full_path == file_path then
 			table.remove(self.file_stack, i)
+			self:update_duplicate_name_flags()
 			vim.schedule(function()
 				self:render_sidebar()
 			end)

@@ -8,6 +8,7 @@ Utils = require "navstack.utils"
 ---@field is_pinned boolean
 ---@field is_temporary boolean
 ---@field is_modified boolean
+---@field is_duplicate_name boolean
 ---@field diagnostics table<vim.diagnostic.Severity, integer>
 ---@field icon string
 ---@field icon_hl string
@@ -27,6 +28,7 @@ function FileEntry:new(name, path, is_current, is_temporary, full_path)
 		is_pinned = false,
 		full_path = full_path,
 		is_modified = false,
+		is_duplicate_name = false,
 		diagnostics = {},
 		icon = "",
 		icon_hl = "",
