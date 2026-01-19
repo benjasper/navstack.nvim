@@ -47,7 +47,8 @@ end
 
 function Filestack:open_sidebar()
 	if self.config.win_type == "tabline" then
-		vim.o.winbar = "%!v:lua.RenderNavstackTabline()"
+		vim.o.tabline = "%!v:lua.RenderNavstackTabline()"
+		vim.o.showtabline = 2
 		return
 	end
 
@@ -122,13 +123,42 @@ function _G.RenderNavstackTabline()
 end
 
 function Filestack:render_tabline()
-	local s = self.config.tabline_config.left_padding
-	local tabs = self.file_stack
-	if #tabs == 0 then return "" end
-
+	local s = ""
 	local seperator = "%#Comment#" .. " " .. self.config.tabline_config.separator .. " "
 
-	for i, entry in ipairs(tabs) do
+	-- Render normal tabpages first (clickable)
+	local tabpages = vim.api.nvim_list_tabpages()
+	local current_tab = vim.api.nvim_get_current_tabpage()
+	if #tabpages > 1 then
+		for _, tab in ipairs(tabpages) do
+			local tabnr = vim.api.nvim_tabpage_get_number(tab)
+			local is_current = (tab == current_tab)
+			local hl = is_current and "%#TabLineSel#" or "%#TabLine#"
+			local win = vim.api.nvim_tabpage_get_win(tab)
+			local buf = vim.api.nvim_win_get_buf(win)
+			local name = vim.api.nvim_buf_get_name(buf)
+			if name == "" then
+				name = "[No Name]"
+			else
+				name = vim.fn.fnamemodify(name, ":t")
+			end
+
+			s = s .. "%" .. tabnr .. "T" .. hl .. " 󰓩 " .. tabnr .. " " .. name .. " " .. "%*"
+		end
+		s = s .. "%T"
+		s = s .. "%=" .. seperator .. "%*"
+		s = s .. "%="
+	end
+
+	-- Render navstack entries on the right
+	local navstack = self.file_stack
+	if #navstack == 0 then
+		return s
+	end
+
+	local nav = self.config.tabline_config.left_padding
+
+	for i, entry in ipairs(navstack) do
 		local is_active = (entry.is_current)
 
 		local hl_index  = is_active and "%#NavstackCurrent#" or "%#NavstackIndex#"
@@ -136,31 +166,31 @@ function Filestack:render_tabline()
 		local hl_base   = is_active and "%#NavstackTabLineSel#" or "%#NavstackTabLine#"
 		local hl_pinned = "%#NavstackPinned#"
 
-		s               = s .. hl_index .. " " .. i .. " " .. "%*"
+		nav             = nav .. hl_index .. " " .. i .. " " .. "%*"
 
 		if entry.is_pinned then
-			s = s .. " " .. hl_pinned .. "󰐃" .. "%*"
+			nav = nav .. " " .. hl_pinned .. "󰐃" .. "%*"
 		end
 
 		if entry.is_modified then
-			s = s .. " " .. hl_base .. "●" .. "%*"
+			nav = nav .. " " .. hl_base .. "●" .. "%*"
 		end
 
-		s = s .. hl_icon .. " " .. entry.icon .. "%*"
-		s = s .. hl_base .. " " .. entry.name .. "%*"
+		nav = nav .. hl_icon .. " " .. entry.icon .. "%*"
+		nav = nav .. hl_base .. " " .. entry.name .. "%*"
 
 		if entry.is_duplicate_name then
-			s = s .. " " .. "%#Comment#" .. entry.path .. "%*"
+			nav = nav .. " " .. "%#Comment#" .. entry.path .. "%*"
 		end
 
-		if i ~= #tabs then
-			s = s .. seperator .. "%*"
+		if i ~= #navstack then
+			nav = nav .. seperator .. "%*"
 		else
-			s = s .. "%<"
+			nav = nav .. "%<"
 		end
 	end
 
-	return s
+	return s .. nav
 end
 
 function Filestack:close_sidebar()
